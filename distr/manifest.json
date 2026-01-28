@@ -1,0 +1,11 @@
+{
+	"id": "habitator",
+	"name": "Habitator - Habit Tracker",
+	"version": "0.0.1",
+	"minAppVersion": "0.15.0",
+	"description": "Simple habit tracker with 365 day buttons for the current year.",
+	"author": "tokrqui",
+	"authorUrl": "https://github.com/tokrqui",
+	"fundingUrl": "https://github.com/tokrqui",
+	"isDesktopOnly": false
+}

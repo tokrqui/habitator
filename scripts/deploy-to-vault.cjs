@@ -43,29 +43,46 @@ async function main() {
   console.log(`Deploying plugin to: ${dest}`);
 
   // Files and folders to copy if present
-  const files = ['manifest.json', 'main.js', 'styles.css', 'README.md'];
+  const files = ['manifest.json', 'styles.css', 'README.md'];
   const folders = ['assets', 'dist'];
+
+  // Prefer a dedicated distributable directory (distr/) if it exists
+  const distrDir = path.join(repoRoot, 'distr');
+  const useDistr = await exists(distrDir);
 
   try {
     await fs.mkdir(dest, { recursive: true });
 
-    for (const f of files) {
-      const src = path.join(repoRoot, f);
-      if (await exists(src)) {
-        await copyFile(src, path.join(dest, f));
-        console.log(`Copied ${f}`);
-      } else {
-        console.log(`Skipping ${f} (not found)`);
-      }
-    }
+    if (useDistr) {
+      console.log('Found distr/ folder — deploying its contents');
+      await copyDir(distrDir, dest);
+      console.log('Copied distr/ -> plugin folder');
 
-    for (const d of folders) {
-      const srcDir = path.join(repoRoot, d);
-      if (await exists(srcDir)) {
-        await copyDir(srcDir, path.join(dest, d));
-        console.log(`Copied folder ${d}`);
-      } else {
-        console.log(`Skipping folder ${d} (not found)`);
+      // Also copy manifest.json from repo root if present
+      const manifestSrc = path.join(repoRoot, 'manifest.json');
+      if (await exists(manifestSrc)) {
+        await copyFile(manifestSrc, path.join(dest, 'manifest.json'));
+        console.log('Copied manifest.json');
+      }
+    } else {
+      for (const f of files) {
+        const src = path.join(repoRoot, f);
+        if (await exists(src)) {
+          await copyFile(src, path.join(dest, f));
+          console.log(`Copied ${f}`);
+        } else {
+          console.log(`Skipping ${f} (not found)`);
+        }
+      }
+
+      for (const d of folders) {
+        const srcDir = path.join(repoRoot, d);
+        if (await exists(srcDir)) {
+          await copyDir(srcDir, path.join(dest, d));
+          console.log(`Copied folder ${d}`);
+        } else {
+          console.log(`Skipping folder ${d} (not found)`);
+        }
       }
     }
 
