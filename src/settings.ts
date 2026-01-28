@@ -4,7 +4,8 @@ import HabitatorPlugin from "./main";
 export interface Habit {
 	id: string;
 	name: string;
-	completedDays: string[]; // ISO date strings: YYYY-MM-DD
+	// Map of year (YYYY) -> array of ISO date strings (YYYY-MM-DD)
+	completedByYear: Record<string, string[]>;
 }
 
 export interface HabitatorSettings {
@@ -26,7 +27,7 @@ export const DEFAULT_SETTINGS: HabitatorSettings = {
 		{
 			id: "00000000-0000-4000-8000-000000000001",
 			name: "Main habit",
-			completedDays: [],
+			completedByYear: { [new Date().getFullYear()]: [] },
 		},
 	],
 	activeHabitId: "00000000-0000-4000-8000-000000000001",
@@ -115,7 +116,9 @@ export class HabitatorSettingTab extends PluginSettingTab {
 					.setWarning()
 					.onClick(async () => {
 						for (const habit of this.plugin.settings.habits) {
-							habit.completedDays = [];
+							const yearKey = this.plugin.settings.year.toString();
+							habit.completedByYear = habit.completedByYear ?? {};
+							habit.completedByYear[yearKey] = [];
 						}
 						await this.plugin.saveSettings();
 						this.plugin.refreshOpenModals();

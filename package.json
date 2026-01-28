@@ -6,7 +6,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production"
+		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+		"deploy:test-vault": "node ./scripts/deploy-to-vault.cjs \"F:/projects/obsidian-group/_test-vault\""
 	},
 	"keywords": [
 		"obsidian-plugin",

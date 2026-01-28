@@ -60,7 +60,8 @@ export default class HabitatorPlugin extends Plugin {
 		const habit: Habit = {
 			id,
 			name: `Habit ${this.settings.habits.length + 1}`,
-			completedDays: [],
+			// initialize empty map; keep history for multiple years
+			completedByYear: {},
 		};
 
 		this.settings.habits.push(habit);
@@ -83,20 +84,31 @@ export default class HabitatorPlugin extends Plugin {
 	isDayCompleted(dateIso: string): boolean {
 		const habit = this.getActiveHabit();
 		if (!habit) return false;
-		return habit.completedDays.includes(dateIso);
+		// completed days are stored per-year in completedByYear
+		const yearKey = dateIso.slice(0, 4);
+		const map = (habit as any).completedByYear as Record<string, string[]> | undefined;
+		if (!map) return false;
+		const arr = map[yearKey];
+		return Array.isArray(arr) && arr.includes(dateIso);
 	}
 
 	async setDayCompleted(dateIso: string, completed: boolean) {
 		const habit = this.getActiveHabit();
 		if (!habit) return;
 
-		const index = habit.completedDays.indexOf(dateIso);
+		// operate on per-year map
+		const yearKey = dateIso.slice(0, 4);
+		habit.completedByYear = (habit as any).completedByYear ?? {};
+		const arr = habit.completedByYear[yearKey] ?? [];
+		const index = arr.indexOf(dateIso);
 
 		if (completed && index === -1) {
-			habit.completedDays.push(dateIso);
+			arr.push(dateIso);
 		} else if (!completed && index >= 0) {
-			habit.completedDays.splice(index, 1);
+			arr.splice(index, 1);
 		}
+
+		habit.completedByYear[yearKey] = arr;
 
 		await this.saveSettings();
 	}
@@ -414,7 +426,8 @@ function normalizeSettings(input: Partial<HabitatorSettings> & { completedDays?:
 		const migratedHabit: Habit = {
 			id: DEFAULT_SETTINGS.habits[0]?.id ?? generateUuid(),
 			name: "Main habit",
-			completedDays: Array.isArray(input.completedDays) ? input.completedDays : [],
+			// put legacy completedDays under the configured year
+			completedByYear: { [base.year]: Array.isArray(input.completedDays) ? input.completedDays : [] },
 		};
 		base.habits = [migratedHabit];
 		base.activeHabitId = migratedHabit.id;
@@ -427,11 +440,23 @@ function normalizeSettings(input: Partial<HabitatorSettings> & { completedDays?:
 		base.activeHabitId = base.habits[0].id;
 	}
 
-	// Ensure every habit has a UUID-ish id.
+	// Ensure every habit has a UUID-ish id and migrate per-habit legacy completedDays.
 	for (const habit of base.habits) {
 		if (!habit.id) habit.id = generateUuid();
 		if (!habit.name) habit.name = "Habit";
-		if (!Array.isArray(habit.completedDays)) habit.completedDays = [];
+
+		// Migrate legacy per-habit `completedDays` into `completedByYear[base.year]` if present.
+		const anyHabit = habit as any;
+		if (anyHabit.completedDays && Array.isArray(anyHabit.completedDays)) {
+			habit.completedByYear = habit.completedByYear ?? {};
+			habit.completedByYear[base.year] = anyHabit.completedDays;
+			delete anyHabit.completedDays;
+		}
+
+		habit.completedByYear = habit.completedByYear ?? {};
+		if (!Array.isArray(habit.completedByYear[base.year])) {
+			habit.completedByYear[base.year] = [];
+		}
 	}
 
 	return base;
